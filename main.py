@@ -1,9 +1,11 @@
 import os
 import json
 from fastapi import FastAPI, Depends, HTTPException, status
-from sqlalchemy.orm.session import Session
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from google import genai
 from google.genai import types
+from dotenv import load_dotenv 
 
 from database import engine, get_db
 import models
@@ -12,9 +14,21 @@ import schemas
 # Ensure tables exist
 models.Base.metadata.create_all(bind=engine)
 
+# Load the secrets from your .env file
+load_dotenv()
+
 app = FastAPI(title="ProvenanceAI Backend", version="1.0.0")
 
-# Initialize Gemini
+# This allows your React frontend to communicate with your FastAPI backend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # In production, replace "*" with your actual frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Initialize Gemini (it will automatically find the key now)
 client = genai.Client()
 
 def generate_interrogation(essay_text: str):
