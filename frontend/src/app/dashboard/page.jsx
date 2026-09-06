@@ -1,11 +1,19 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 import StudentCombobox from "@/components/StudentCombobox";
 import FileUploadZone from "@/components/FileUploadZone";
 import { fetchStudents, createStudent, uploadBaseline } from "@/lib/api";
 import { Users, UploadCloud, CheckCircle, UserPlus, AlertTriangle } from "lucide-react";
 
+
 export default function DashboardPage() {
+  const router = useRouter();
+
+  const [user, setUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [students, setStudents] = useState([]);
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [essayTitle, setEssayTitle] = useState("");
@@ -18,6 +26,10 @@ export default function DashboardPage() {
   const [newName, setNewName] = useState("");
   const [newRollNo, setNewRollNo] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push("/login");
+  };
 
   const loadStudentData = async () => {
     try {
@@ -34,8 +46,21 @@ export default function DashboardPage() {
       ]);
     }
   };
-
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (!currentUser) {
+        router.push("/login");
+      } else {
+        setUser(currentUser);
+      }
+
+      setAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [router]);
+  useEffect(() => {
+    
     loadStudentData();
   }, []);
 
@@ -104,6 +129,13 @@ export default function DashboardPage() {
 
   const selectedStudent = students.find((s) => s.id === selectedStudentId);
 
+  if (authLoading) {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      Loading...
+    </div>
+  );
+}
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">
       <div className="flex justify-between items-center">
@@ -113,12 +145,22 @@ export default function DashboardPage() {
             Ensure every student has an established cognitive writing fingerprint before verification.
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-primary hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition"
-        >
-          <UserPlus size={16} /> Add New Student
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-primary hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-lg text-sm flex items-center gap-2 transition"
+          >
+            <UserPlus size={16} />
+            Add New Student
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold px-4 py-2 rounded-lg text-sm transition"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
